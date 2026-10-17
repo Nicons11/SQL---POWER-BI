@@ -1,0 +1,85 @@
+---------------------
+-- Entregable n° 3 --
+---------------------
+use Ventas_Tech_DB
+
+-- Consulta 1: Resumen ejecutivo mensual
+
+select
+    month(fecha_venta) as mes,
+    sum(cantidad * precio_unitario) as total_facturado,
+    count(*) as cantidad_pedidos,
+    sum(cantidad * precio_unitario) / count(*) as ticket_promedio
+from ventas
+group by month(fecha_venta)
+order by mes;
+
+-- CONSULTA 2: Ranking de productos
+
+select top 5
+    id_producto as producto,
+    sum(cantidad) as unidades_vendidas,
+    sum(cantidad * precio_unitario) as total_facturado
+from ventas
+group by id_producto
+order by total_facturado desc;
+
+-- CONSULTA 3: Clientes recurrentes
+
+select
+    id_cliente,
+    count(*) as cantidad_pedidos,
+    sum(cantidad * precio_unitario) as total_gastado
+from ventas
+group by id_cliente
+having count(*) > 1
+order by total_gastado desc;
+
+
+-- CONSULTA 4: Meses por encima/por debajo del promedio
+
+select
+    mes,
+    total_facturado,
+    case
+        when total_facturado > (
+            select avg(total_mensual)
+            from (
+                select
+                    sum(cantidad * precio_unitario) as total_mensual
+                from ventas
+                group by month(fecha_venta)
+            ) as promedio_meses
+        )
+        then 'por encima'
+        else 'por debajo'
+    end as comparacion
+from (
+    select
+        month(fecha_venta) as mes,
+        sum(cantidad * precio_unitario) as total_facturado
+    from ventas
+    group by month(fecha_venta)
+) as facturacion_mensual
+order by mes;
+
+
+
+/*
+=========================================
+      5)  HALLAZGOS DE NEGOCIO 
+=========================================
+
+1. Durante marzo se registraron 10 ventas,
+con una facturacion total de $6444
+y un ticket promedio de $644,40.
+
+2. El producto con ID 1 lidero el ranking de facturacion, 
+generando $3600 con solamente 3 unidades vendidas.
+Esto representa aproximadamente el 55,9% de la facturacion total.
+
+3. Marzo fue el unico mes con ventas registradas. Por lo tanto, su facturacion
+de $6444 coincide con el promedio mensual.
+No es posible comparar el rendimiento entre diferentes meses con estos datos.
+
+*/
