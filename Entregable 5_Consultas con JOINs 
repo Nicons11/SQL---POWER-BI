@@ -1,0 +1,118 @@
+
+-----------------------------------------
+ --Consultas con JOINs para el proyecto--
+-----------------------------------------
+
+-- CONSULTA 1: VISTA BASE DEL PROYECTO: Ventas_Tech_DB
+-- Incluye fecha, identificación del cliente, descripción del producto, cantidad, precio unitario y total de venta.
+use Ventas_Tech_DB;
+select v.fecha_venta as fecha,
+    c.id_cliente,
+    cat.descripcion as descripcion_producto,
+    v.cantidad,
+    v.precio_unitario,
+    v.precio_unitario * v.cantidad as total_venta
+from ventas as v
+inner join clientes as c 
+on v.id_cliente = c.id_cliente
+inner join productos as p
+on v.id_producto = p.id_producto
+inner join categorias as cat
+on p.id_categoria = cat.id_categoria
+order by v.fecha_venta desc;
+
+/*
+Hallazgos: La categoría computación concentra el 76,8 % 
+de la facturación total. Se muestra una fuerte dependencia de esta categoría.
+*/
+
+--  CONSULTA 2: CLIENTES SIN VENTAS
+-- Incluye nombre, email y fecha de registro.
+select c.nombre,
+    c.email,
+    c.fecha_registro
+from clientes as c
+left join ventas as v
+on c.id_cliente = v.id_cliente
+where v.id_cliente is null; 
+
+/*
+Hallazgo: No se encontraron clientes sin compras.
+Los 5 clientes registrados realizaron al menos una compra,
+por lo que CRM no tiene clientes inactivos por primera compra.
+*/
+
+-- CONSULTA 3: PRODUCTOS SIN VENTA REGISTRADA
+-- Incluye mostrá nombre del producto, categoría y precio.
+select
+    p.nombre_producto,
+    cat.descripcion as categoria,
+    p.precio
+from productos as p
+inner join categorias as cat
+on p.id_categoria = cat.id_categoria 
+left join ventas as v   
+on p.id_producto = v.id_producto
+where v.cantidad is null;
+
+/*
+Hallazgo: No se encontraron productos sin ventas.
+Los 6 productos registran al menos una venta,
+por lo que no hay articulos sin movimiento comercial.
+*/
+
+-- CONSULTA 4: 
+--Divide las ventas en dos periodos y compara su facturacion.
+
+/*
+SELECT
+    canal,
+    SUM(total_venta) AS total_facturado
+
+FROM (
+
+    SELECT
+        'Hasta el 10 de marzo' AS canal,
+        cantidad * precio_unitario AS total_venta
+    FROM ventas
+    WHERE fecha_venta < '2024-03-11'
+
+    UNION ALL
+
+    SELECT
+        'Desde el 11 de marzo' AS canal,
+        cantidad * precio_unitario AS total_venta
+    FROM ventas
+    WHERE fecha_venta >= '2024-03-11'
+
+) AS consolidado
+
+GROUP BY canal
+ORDER BY total_facturado DESC;
+
+*/
+select 
+canal,
+    SUM(total_venta) as total_facturado
+from (
+select 
+    'Hasta el 10 de marzo' as canal,
+    cantidad * precio_unitario as total_venta
+from ventas
+where fecha_venta < '2024-03-11'
+union all
+select 
+    'Desde el 11 de marzo' as canal,
+    cantidad * precio_unitario as total_venta
+from ventas
+where fecha_venta >= '2024-03-11'
+) as consolidado
+group by canal
+order by total_facturado desc;
+
+/*
+Hallazgo: Las ventas hasta el 10 de marzo generaron
+$3620, frente a $2824 desde el 11 de marzo.
+El primer periodo concentro el 56,2% de la facturacion.
+*/
+
